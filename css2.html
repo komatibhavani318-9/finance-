@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>💰 Student Finance Manager</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #4CAF50;
+    }
+    form {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    input, button {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .alert {
+      text-align: center;
+      padding: 10px;
+      margin-top: 15px;
+      border-radius: 6px;
+      font-weight: bold;
+      display: none;
+    }
+    .alert.warning { background: #ffcc00; }
+    .alert.danger { background: #ff4444; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>💰 Student Finance Manager</h1>
+
+    <!-- Expense Form -->
+    <form id="expenseForm">
+      <input type="text" id="description" placeholder="Expense Description" required>
+      <input type="number" id="amount" placeholder="Amount (₹)" required>
+      <button type="submit">Add Expense</button>
+    </form>
+
+    <!-- Alerts -->
+    <div id="budgetAlert" class="alert"></div>
+
+    <!-- Charts -->
+    <canvas id="categoryChart" height="150"></canvas>
+    <canvas id="trendChart" height="150"></canvas>
+  </div>
+
+  <script>
+    const expenses = [];
+    const categories = { Food: 0, Travel: 0, Housing: 0, Entertainment: 0, Others: 0 };
+    const budgetLimit = 5000; // Example limit ₹5000
+
+    const categoryChart = new Chart(document.getElementById("categoryChart"), {
+      type: 'pie',
+      data: {
+        labels: Object.keys(categories),
+        datasets: [{
+          data: Object.values(categories),
+          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#9CCC65', '#BA68C8']
+        }]
+      }
+    });
+
+    const trendChart = new Chart(document.getElementById("trendChart"), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: "Daily Spending (₹)",
+          data: [],
+          borderColor: "#4CAF50",
+          fill: false,
+          tension: 0.3
+        }]
+      }
+    });
+
+    function categorize(description) {
+      description = description.toLowerCase();
+      if (description.includes("food") || description.includes("pizza") || description.includes("zomato")) return "Food";
+      if (description.includes("uber") || description.includes("bus") || description.includes("ola")) return "Travel";
+      if (description.includes("rent") || description.includes("room")) return "Housing";
+      if (description.includes("movie") || description.includes("netflix")) return "Entertainment";
+      return "Others";
+    }
+
+    document.getElementById("expenseForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const description = document.getElementById("description").value;
+      const amount = parseFloat(document.getElementById("amount").value);
+      const category = categorize(description);
+
+      // Store expense
+      expenses.push({ description, amount, category, date: new Date().toLocaleDateString() });
+      categories[category] += amount;
+
+      // Update charts
+      categoryChart.data.datasets[0].data = Object.values(categories);
+      categoryChart.update();
+
+      const today = new Date().toLocaleDateString();
+      const todaySpent = expenses.filter(e => e.date === today).reduce((sum, e) => sum + e.amount, 0);
+      if (!trendChart.data.labels.includes(today)) {
+        trendChart.data.labels.push(today);
+        trendChart.data.datasets[0].data.push(todaySpent);
+      } else {
+        let idx = trendChart.data.labels.indexOf(today);
+        trendChart.data.datasets[0].data[idx] = todaySpent;
+      }
+      trendChart.update();
+
+      // Budget Alerts
+      const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+      const alertBox = document.getElementById("budgetAlert");
+      if (totalSpent > budgetLimit) {
+        alertBox.textContent = ⚠ You have exceeded your budget! Total: ₹${totalSpent};
+        alertBox.className = "alert danger";
+        alertBox.style.display = "block";
+      } else if (totalSpent > budgetLimit * 0.8) {
+        alertBox.textContent = ⚠ Warning: You have spent 80% of your budget! Total: ₹${totalSpent};
+        alertBox.className = "alert warning";
+        alertBox.style.display = "block";
+      } else {
+        alertBox.style.display = "none";
+      }
+
+      // Reset form
+      document.getElementById("expenseForm").reset();
+    });
+  </script>
+</body>
+</html>
